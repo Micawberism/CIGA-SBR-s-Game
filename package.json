@@ -1,0 +1,36 @@
+{
+  "name": "ciga_sbr_game",
+  "version": "1.0.0",
+  "description": "2020 CIGA GameJam  铁球跑小队作品。",
+  "main": "index.html",
+  "window": {
+    "title": "深空茧居族",
+    "width": 960,
+    "height": 600,
+    "position": "center",
+    "toolbar": false
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "watch": "webpack --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Micawberism/CIGA-SBR-s-Game.git"
+  },
+  "author": "铁球跑小队（银幻，bbh）",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Micawberism/CIGA-SBR-s-Game/issues"
+  },
+  "homepage": "https://github.com/Micawberism/CIGA-SBR-s-Game#readme",
+  "dependencies": {
+    "pixi-filters": "^3.1.1",
+    "pixi.js": "^5.3.3"
+  },
+  "devDependencies": {
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  }
+}
