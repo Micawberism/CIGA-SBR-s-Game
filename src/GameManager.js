@@ -35,14 +35,19 @@ export class GameManager {
     static initMain() {
         this.currentMap = null;
         this.currentCard = null;
-        this.actionTimes = 2;
-        this.nowAction = 0;
+        this.notifications = null;
         this.nowPhase = 0;
+        this.needSetup = false;
+        this.confirmSetup = false;
+        this.expIndex = -1;
         this.news = {
             title: '',
             context: ''
         };
         this.message = null;
+        this.actionTimes = 2;
+        this.nowAction = 0;
+        this.onBuyingCard = false;
         this.initPlayer();
     }
 
@@ -56,6 +61,7 @@ export class GameManager {
             express: [],
             cards: []
         };
+        this.deck.initGift();
     }
 
     static addToStage(object) {

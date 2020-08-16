@@ -39,8 +39,9 @@ export class GameTable_Card extends GameTable_Base {
         super(...args);
     }
 
-    initialize(x, y) {
-        super.initialize(x, y);
+    initialize(data) {
+        this.data = data;
+        super.initialize(data.capacity[0], data.capacity[1]);
         this.initMembers();
         this.drawCard();
         this.drawLabel();
@@ -54,19 +55,52 @@ export class GameTable_Card extends GameTable_Base {
 
     drawCard() {
         this.lineStyle(1, 0xffffff, 1, 0);
-        this.beginFill(0x333333);
+        this.beginFill(this.setColor());
         this.drawRect(0, 0, this.tileWidth * this.tile[0], this.tileWidth * this.tile[1]);
         this.endFill();
     }
 
+    setColor() {
+        const type = this.data.type;
+        if(type.includes('条约')) {
+            return 0x2e86c1;
+        }
+        if(type.includes('引擎')) {
+            return 0xba4a00;
+        }
+        if(type.includes('非法')) {
+            return 0xb03a2e;
+        }
+        if(type.includes('娱乐')) {
+            return 0x76448a;
+        }
+        if(type.includes('资源')) {
+            return 0xb03a2e;
+        }
+    }
+
     drawLabel() {
-        //
+        const size = this.data.capacity[0] == 1 ? 12 : 18;
+        this.label = GameManager.drawText(this.data.label, 0, 0, size);
+        GameManager.autoWrap(this.label, this.width);
+        this.label.position.set((this.width - this.label.width) / 2, (this.height - this.label.height) / 2);
+        this.addChild(this.label);
     }
 
     setInteraction() {
         this.interactive = true;
-        this.on('click', this.onMouseClick)
+        this.on('pointerover', this.onMouseOver)
+            .on('pointerout', this.onMouseOut)
+            .on('click', this.onMouseClick)
             .on('pointermove', this.onMouseMove);
+    }
+
+    onMouseOver() {
+        GameManager.message = this.data;
+    }
+
+    onMouseOut() {
+        GameManager.message = null;
     }
 
     onMouseClick() {
@@ -87,6 +121,16 @@ export class GameTable_Card extends GameTable_Base {
     onDragClick() {
         if(GameManager.currentMap.mouseOnMap) {
             GameManager.currentMap.insertSlot();
+            GameManager.confirmSetup = true;
+        }
+    }
+    
+    onMapClick() {
+        if(this.inserting) {
+            this.inserted = false;
+            GameManager.currentCard = this;
+            GameManager.currentMap.pullSlot();
+            GameManager.confirmSetup = false;
         }
     }
 
@@ -99,14 +143,6 @@ export class GameTable_Card extends GameTable_Base {
         }
         else {
             this.cardOnMap = false;
-        }
-    }
-
-    onMapClick() {
-        if(this.inserting) {
-            this.inserted = false;
-            GameManager.currentCard = this;
-            GameManager.currentMap.pullSlot();
         }
     }
 

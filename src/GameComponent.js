@@ -6,6 +6,7 @@
 //导入
 import {Container, Graphics, Text} from 'pixi.js'
 import {GameManager} from './GameManager';
+import { GameTable_Card } from './GameTable';
 
 //-----------------------------------------------------------
 // GameFrame
@@ -237,11 +238,40 @@ export class GamePhaseShow extends Container {
         }
     }
 
+    showExpressConfirm(card) {
+        if(!this.card) {
+            this.card = card;
+            this.show = new GameItem('确认安装', 24);
+            this.show.setInteraction(this.confirmCard.bind(this));
+            this.show.visible = false;
+            this.addChild(this.show);
+        }
+    }
+
+    confirmCard() {
+        this.card.inserting = false;
+        GameManager.needSetup = false;
+        GameManager.confirmSetup = false;
+        GameManager.player.cards.push(this.card);
+        this.closeShow();
+    }
+
+    updateExpressConfirm() {
+        if(this.show && GameManager.confirmSetup) {
+            this.show.visible = true;
+            this.show.position.set(this.card.x, this.card.y + this.card.height * 1.8);
+        }
+        else {
+            this.show.visible = false;
+        }
+    }
+
     showInternetAction() {
         if(!this.show) {
             this.show = new GameCardList();
             this.showCenter();
             this.addChild(this.show);
+            GameManager.onBuyingCard = true;
             GameManager.actionTimes--;
         }
     }
@@ -259,6 +289,7 @@ export class GamePhaseShow extends Container {
         if(this.show) {
             this.removeChildren();
             this.show = null;
+            this.card = null;
         }
     }
     
@@ -342,9 +373,16 @@ export class GameConsole extends GameFrame {
             const cost = GameManager.drawText('费用：' + message.cost, this.pad, ty);
             ty += cost.height + 20;
             this.addToFrame(cost);
-            const time = GameManager.drawText('运送时间：' + message.time, this.pad, ty);
-            ty += time.height + 20;
-            this.addToFrame(time);
+            if(GameManager.onBuyingCard) {
+                const time = GameManager.drawText('运送时间：' + message.time, this.pad, ty);
+                ty += time.height + 20;
+                this.addToFrame(time);
+                const picture = new GameTable_Card(message);
+                picture.position.set(this.pad, ty);
+                picture.interactive = false;
+                ty += picture.height;
+                this.addToFrame(picture);
+            }
             const description = GameManager.drawText(message.description, this.pad, ty + 20, 20);
             GameManager.autoWrap(description, this.width);
             this.addToFrame(description);
@@ -362,6 +400,46 @@ export class GameConsole extends GameFrame {
             const text = GameManager.drawText(GameManager.news.context, this.pad, title.height + padding.height, 20);
             GameManager.autoWrap(text, this.width);
             this.addToFrame(text);
+        }
+    }
+
+}
+
+//-----------------------------------------------------------
+// GameNotifications
+//
+// 游戏显示。
+//-----------------------------------------------------------
+
+export class GameNotifications extends GameFrame {
+
+    constructor(...args) {
+        super(...args);
+    }
+
+    pushNotice(text) {
+        this.notice = GameManager.drawText(text, 0, 0, 20);
+        GameManager.autoWrap(this.notice, this.width);
+        this.notice.position.set((this.width - this.notice.width) / 2, (this.height - this.notice.height) / 2);
+        this.addChild(this.notice);
+        this.getNotice = true;
+        this.delayTime = 2.0;
+    }
+
+    updateNotice() {
+        if(this.getNotice) {
+            if(this.notice.alpha > 0) {
+                if(this.delayTime >= 0) {
+                    this.delayTime -= 1 / 60;
+                }
+                else {
+                    this.notice.alpha -= 0.01;
+                }
+            }
+            else {
+                this.getNotice = false;
+                this.notice = null;
+            }
         }
     }
 
@@ -402,7 +480,7 @@ export class GameAction extends Container {
 
     action(id) {
         return function() {
-            if(GameManager.nowAction == 0) {
+            if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
                 this.interactive = false;
                 this.changeSelect(false);
                 this.alpha = 0.7;
@@ -441,6 +519,12 @@ export class GameDeck {
         this.setupDeck();
     }
 
+    initGift() {
+        const card = this.cards.find(c => c.label == '混合金属');
+        card.time = 0;
+        GameManager.player.express.push(card);
+    }
+
     showRealm() {
         return this.star.realm;
     }
@@ -464,6 +548,7 @@ export class GameDeck {
                 const data = this.news.find(x => x.title == n.title);
                 GameManager.news.title = data.title;
                 GameManager.news.context = data.context;
+                GameManager.notifications.pushNotice('本周头条出现！');
                 break;
             }
             else {

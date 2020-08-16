@@ -9,7 +9,7 @@ import {GlitchFilter} from 'pixi-filters'
 import {GameManager} from './GameManager';
 import {SceneManager} from './SceneManager';
 import {GameTable_Card, GameTable_Map} from './GameTable';
-import {GameFrame, GameItem, GamePhaseShow, GameStatus, GameAction, GameConsole} from './GameComponent';
+import {GameFrame, GameItem, GamePhaseShow, GameStatus, GameAction, GameConsole, GameNotifications} from './GameComponent';
 
 //-----------------------------------------------------------
 // GameScene_Base
@@ -223,7 +223,7 @@ export class GameScene_Main extends GameScene_Base {
         this.createStatus();
         this.createConsole();
         this.createAction();
-        this.createDanger();
+        this.createNotifications();
 
         this.setFilters();
         this.setPhase();
@@ -267,9 +267,10 @@ export class GameScene_Main extends GameScene_Base {
         this.action.addChild(actionItems);
     }
 
-    createDanger() {
-        this.danger = new GameFrame('70', '100', '90', '100', true);
-        this.addChild(this.danger);
+    createNotifications() {
+        const notifications = new GameNotifications('70', '100', '90', '100', true);
+        this.addChild(notifications);
+        GameManager.notifications = notifications;
     }
 
     setFilters() {
@@ -314,6 +315,7 @@ export class GameScene_Main extends GameScene_Base {
             case 6: this.phaseVictory(); break;
             case 7: this.phaseEnd(); break;
         }
+        GameManager.notifications.updateNotice();
     }
 
     phaseStart() {
@@ -328,23 +330,50 @@ export class GameScene_Main extends GameScene_Base {
             this.changeBlur(false);
             this.phaseShow.closeShow();
             this.delayTime = 0;
-            GameManager.nowPhase = 2;
+            GameManager.nowPhase = 1;
         }
     }
 
     phaseExpress() {
-        //
+        if(GameManager.needSetup) {
+            if(!GameManager.currentCard && GameManager.expIndex != -1) {
+                const card = new GameTable_Card(GameManager.player.express[GameManager.expIndex]);
+                this.map.addToFrame(card);
+                GameManager.currentCard = card;
+                GameManager.player.express.splice(GameManager.expIndex, 1);
+                GameManager.expIndex = -1;
+                this.phaseShow.showExpressConfirm(card);
+            }
+            if(this.phaseShow.isShowed()) {
+                this.phaseShow.updateExpressConfirm();
+            }
+            this.console.showConsole();
+        }
+        else if(GameManager.player.express.length != 0 && GameManager.expIndex != -2) {
+            const index = GameManager.player.express.findIndex(e => e.time == 0);
+            if(index != -1) {
+                GameManager.needSetup = true;
+                GameManager.expIndex = index;
+            }
+            else {
+                GameManager.expIndex = -2;
+            }
+        }
+        else {
+            GameManager.nowPhase = 2;
+            GameManager.needSetup = false;
+        }
     }
 
     phaseNews() {
         GameManager.deck.headlines();
-        console.log(GameManager.news)
         GameManager.nowPhase = 3;
     }
 
     phaseAction() {
         this.console.showConsole();
         if(GameManager.actionTimes <= 0) {
+            GameManager.onBuyingCard = false;
             GameManager.nowPhase = 4;
         }
         switch(GameManager.nowAction) {
