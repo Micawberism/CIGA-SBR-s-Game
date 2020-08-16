@@ -41,6 +41,7 @@ export class GameTable_Card extends GameTable_Base {
 
     initialize(data) {
         this.data = data;
+        this.isEngine = (data.type.includes('引擎') || data.type.includes('条约'));
         super.initialize(data.capacity[0], data.capacity[1]);
         this.initMembers();
         this.drawCard();
@@ -67,6 +68,12 @@ export class GameTable_Card extends GameTable_Base {
         }
         if(type.includes('引擎')) {
             return 0xba4a00;
+        }
+        if(type.includes('事件')) {
+            return 0x68ca39;
+        }
+        if(type.includes('防御')) {
+            return 0xca3987;
         }
         if(type.includes('非法')) {
             return 0xb03a2e;
@@ -132,6 +139,13 @@ export class GameTable_Card extends GameTable_Base {
             GameManager.currentMap.pullSlot();
             GameManager.confirmSetup = false;
         }
+        if(GameManager.useEngine && this.isEngine) {
+            GameManager.useEngine = false;
+            this.cardCommand();
+            GameManager.message = null;
+            GameManager.nowAction = 0;
+            GameManager.actionTimes--;
+        }
     }
 
     onDragMove(event) {
@@ -143,6 +157,36 @@ export class GameTable_Card extends GameTable_Base {
         }
         else {
             this.cardOnMap = false;
+        }
+    }
+
+    cardPay() {
+        GameManager.analysisCommand(this.data.pay);
+    }
+
+    cardCommand() {
+        GameManager.analysisCommand(this.data.command);
+    }
+
+    addVictory() {
+        const vict = this.data.victory
+        if(vict) {
+            if(!(vict in GameManager.player.victory)) {
+                GameManager.player.victory[vict] = 0;
+            }
+        }
+    }
+
+    addDefence() {
+        if(this.data.type.includes('防御')) {
+            const defence = GameManager.player.resources.find(x => x.label == '防御');
+            if(defence) {
+                GameManager.analysisCommand(this.data.command);
+            }
+            else {
+                GameManager.player.resources.push({label: '防御', value: 0, color: 0xdfa8dc});
+                GameManager.analysisCommand(this.data.command);
+            }
         }
     }
 
@@ -215,7 +259,8 @@ export class GameTable_Map extends GameTable_Base {
         const dy = cardPos.y - this.y;
         const x = Math.floor(dx / this.tileWidth);
         const y = Math.floor(dy / this.tileWidth);
-        this.cardData = [Math.min(this.tile[0], Math.max(0, x)), Math.min(this.tile[1], Math.max(0, y))];
+        this.cardData = [Math.min(this.tile[0], Math.max(0, x)), Math.min(this.tile[1], Math.max(0, y)),
+        GameManager.currentCard.tile[0], GameManager.currentCard.tile[1]];
         this.drawSlot();
     }
 
@@ -226,10 +271,11 @@ export class GameTable_Map extends GameTable_Base {
                 this.canSetup = false;
                 return;
             }
-            for(let i = 0;i < cur.tile[0];i++) {
-                for(let j = 0;j < cur.tile[1];j++) {
+            for(let i = this.cardData[0];i < cur.tile[0];i++) {
+                for(let j = this.cardData[1];j < cur.tile[1];j++) {
                     if(this.getMapData(i, j) == 1) {
                         this.canSetup = false;
+                        return;
                     }
                 }
             }
@@ -238,7 +284,7 @@ export class GameTable_Map extends GameTable_Base {
     }
 
     drawSlot() {
-        if(!this.slot) {
+        if(!this.slot && this.canSetup) {
             this.slot = new Graphics();
             this.slot.alpha = 0.7;
             this.slot.beginFill(0xff7777);
@@ -268,6 +314,14 @@ export class GameTable_Map extends GameTable_Base {
         }
     }
 
+    sloted() {
+        for(let i = this.cardData[0];i < this.cardData[2];i++) {
+            for(let j = this.cardData[1];j < this.cardData[3];j++) {
+                this.setMapData(i, j);
+            }
+        }
+    }
+
     pullSlot() {
         if(GameManager.currentCard) {
             const card = GameManager.currentCard;
@@ -277,6 +331,10 @@ export class GameTable_Map extends GameTable_Base {
 
     getMapData(x, y) {
         return this.mapData[x + y * this.tile[0]];
+    }
+
+    setMapData(x, y) {
+        this.mapData[x + y * this.tile[0]] = 1;
     }
 
 }

@@ -3,17 +3,84 @@
         "realm": "鲸鱼座η",
         "description": "人类文明边缘的恒星，治安很好，但是可采集到的资源有限，对非法资源的审查也很严格。",
         "news": [
-            {"title": "洛克财团招标", "times": 0.4},
-            {"title": "破碎的小行星", "times": 0.8},
-            {"title": "公民武装周", "times": 1}
+            {"title": "洛克财团招标", "times": 0.2},
+            {"title": "破碎的小行星", "times": 0.45},
+            {"title": "公民武装周", "times": 0.55},
+            {"title": "银河TV招收主播", "times": 0.7},
+            {"title": "银河系文化节", "times": 0.8}
         ],
         "danger": "审查",
         "cards": [
             {"label": "混合金属", "num": 2},
             {"label": "跳蚤市场杂物", "num": 2},
             {"label": "诺兰零食", "num": 2},
-            {"label": "诺拉香料", "num": 2},
-            {"label": "个人极乐舱", "num": 2}
+            {"label": "希拉香料", "num": 2},
+            {"label": "个人极乐舱", "num": 2},
+            {"label": "自动动能炮台", "num": 2},
+            {"label": "无人能量炮台", "num": 2},
+            {"label": "洛克财团合同", "num": 2}
+        ]
+    },
+    {
+        "realm": "肯·希捷",
+        "description": "资源丰富，当地有大量工人，自然灾害很多",
+        "news": [
+            {"title": "磁暴", "times": 0.15},
+            {"title": "破碎的小行星", "times": 0.4},
+            {"title": "采矿工会", "times": 0.55},
+            {"title": "罢工", "times": 0.7},
+            {"title": "银河TV招收主播", "times":0.8}
+        ],
+        "danger": "彗星",
+        "cards": [
+            {"label": "混合金属", "num": 2},
+            {"label": "跳蚤市场杂物", "num": 2},
+            {"label": "7号核聚变电池", "num": 2},
+            {"label": "自动动能炮台", "num": 2},
+            {"label": "无人能量炮台", "num": 2},
+            {"label": "感应导弹发射器", "num": 2},
+            {"label": "希捷劳工联合会", "num": 2}
+        ]
+    },
+    {
+        "realm": "N87星云",
+        "description": "星际商贸的交通节点，能轻易的买到非法资源，但是治安较差。",
+        "news": [
+            {"title": "线上赌场开业", "times": 0.2},
+            {"title": "移动管制", "times": 0.35},
+            {"title": "洛克财团招标", "times": 0.5},
+            {"title": "公民武装周", "times": 0.6}
+        ],
+        "danger": "星云暴力组织",
+        "cards": [
+            {"label": "快乐之水", "num": 2},
+            {"label": "7号核聚变电池", "num": 2},
+            {"label": "Rhea-3060Ti迷你终端", "num": 2},
+            {"label": "个人极乐舱", "num": 2},
+            {"label": "自动动能炮台", "num": 2},
+            {"label": "无人能量炮台", "num": 2},
+            {"label": "感应导弹发射器", "num": 2},
+            {"label": "喀戎渡口", "num": 2}
+        ]
+    },
+    {
+        "realm": "NGC4837",
+        "description": "外星人的星门折跃站，有很多地外生命相关，星门中也经常会出现特别的情况。",
+        "news": [
+            {"title": "银河系文化节", "times": 0.2},
+            {"title": "圣诺兰学院", "times": 0.45},
+            {"title": "星门事故", "times": 0.6},
+            {"title": "移动管制", "times": 0.75}
+        ],
+        "danger": "不可名状之物",
+        "cards": [
+            {"label": "诺兰零食", "num": 2},
+            {"label": "跳蚤市场杂物", "num": 2},
+            {"label": "希拉香料", "num": 2},
+            {"label": "个人极乐舱", "num": 2},
+            {"label": "无人能量炮台", "num": 2},
+            {"label": "感应导弹发射器", "num": 2},
+            {"label": "希捷劳工联合会", "num": 2}
         ]
     }
 ]

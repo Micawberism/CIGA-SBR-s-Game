@@ -99,11 +99,14 @@ export class GameCardList extends GameFrame {
             GameManager.player.resources[0].value -= this.cardData.cost;
             GameManager.message = null;
             GameManager.nowAction = 0;
+            GameManager.actionTimes--;
+            GameManager.onBuyingCard = false;
         }
     }
 
     onCancel() {
         GameManager.nowAction = 0;
+        GameManager.actionTimes--;
     }
 
     drawFrame(w, h) {
@@ -253,6 +256,9 @@ export class GamePhaseShow extends Container {
         GameManager.needSetup = false;
         GameManager.confirmSetup = false;
         GameManager.player.cards.push(this.card);
+        GameManager.currentMap.sloted();
+        this.card.addVictory();
+        this.card.addDefence();
         this.closeShow();
     }
 
@@ -266,13 +272,54 @@ export class GamePhaseShow extends Container {
         }
     }
 
+    showMoveSpace() {
+        if(!this.show) {
+            this.show = new Container();
+            const list = GameManager.deck.decks.filter(s => s.realm != GameManager.deck.showRealm());
+            for(let i of list) {
+                const item = new GameItem(i.realm, 30);
+                item.position.set(0, this.show.height);
+                item.setInteraction(this.moveSpace.bind(item));
+                this.show.addChild(item);
+            }
+            const cancel = new GameItem('离开', 30);
+            cancel.position.set((this.show.width - cancel.width) / 2, this.show.height);
+            cancel.setInteraction(() => {
+                const gitem = GameManager.actionItem;
+                gitem.interactive = true;
+                gitem.alpha = 1;
+                GameManager.actionItem = null;
+                GameManager.nowAction = 0;
+            });
+            this.show.addChild(cancel);
+            this.showCenter();
+            this.addChild(this.show);
+        }
+    }
+
+    moveSpace() {
+        GameManager.deck.moveStar(this.item.text);
+        GameManager.nowAction = 0;
+        GameManager.actionTimes--;
+        GameManager.player.location = GameManager.deck.star.realm;
+    }
+
+    showStartEngine() {
+        if(!this.show) {
+            this.show = new Graphics();
+            this.show.beginFill(0xff0000);
+            this.show.drawCircle(-50, -50, 10);
+            this.show.endFill();
+            this.addChild(this.show);
+        }
+    }
+
     showInternetAction() {
         if(!this.show) {
             this.show = new GameCardList();
             this.showCenter();
             this.addChild(this.show);
             GameManager.onBuyingCard = true;
-            GameManager.actionTimes--;
         }
     }
 
@@ -418,10 +465,11 @@ export class GameNotifications extends GameFrame {
     }
 
     pushNotice(text) {
+        this.context.removeChildren();
         this.notice = GameManager.drawText(text, 0, 0, 20);
         GameManager.autoWrap(this.notice, this.width);
         this.notice.position.set((this.width - this.notice.width) / 2, (this.height - this.notice.height) / 2);
-        this.addChild(this.notice);
+        this.addToFrame(this.notice);
         this.getNotice = true;
         this.delayTime = 2.0;
     }
@@ -438,7 +486,7 @@ export class GameNotifications extends GameFrame {
             }
             else {
                 this.getNotice = false;
-                this.notice = null;
+                this.context.removeChildren();
             }
         }
     }
@@ -451,40 +499,98 @@ export class GameNotifications extends GameFrame {
 // 游戏显示。
 //-----------------------------------------------------------
 
-export class GameAction extends Container {
+export class GameAction extends GameFrame {
         
-    constructor() {
-        super();
+    constructor(...args) {
+        super(...args);
         this.drawItems();
     }
 
     drawItems() {
-        const item1 = new GameItem('移动空间站', 32);
-        const item2 = new GameItem('启动引擎', 32);
-        const item3 = new GameItem('星际网络', 32);
+        const item1 = new GameItem('移动空间站', 28);
+        const item2 = new GameItem('启动引擎', 28);
+        const item3 = new GameItem('星际网络', 28);
+        const item4 = new GameItem('跳过行动', 28);
         item1.setInteraction(this.action(1).bind(item1));
         item2.setInteraction(this.action(2).bind(item2));
         item3.setInteraction(this.action(3).bind(item3));
-        this.items = [item1, item2, item3];
+        item4.setInteraction(this.action(4).bind(item4));
+        this.items = [item1, item2, item3, item4];
         this.resizeItems();
     }
 
     resizeItems() {
-        let a = false;
+        this.context.removeChildren();
+        let w = 30;
         for(let i of this.items) {
-            i.x = a ? this.width + 50 : this.width;
-            this.addChild(i);
-            a = true;
+            i.x = w;
+            this.addToFrame(i);
+            w += i.width + 30;
         }
+        this.context.y = (this.height - this.context.height) / 2;
     }
 
     action(id) {
-        return function() {
-            if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
-                this.interactive = false;
-                this.changeSelect(false);
-                this.alpha = 0.7;
-                GameManager.nowAction = id;
+        if(id == 1) {
+            return function() {
+                if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
+                    GameManager.actionItem = this;
+                    this.interactive = false;
+                    this.changeSelect(false);
+                    this.alpha = 0.7;
+                    GameManager.nowAction = id;
+                }
+            }
+        }
+        else if(id == 2) {
+            return function() {
+                if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
+                    const cards = GameManager.player.cards;
+                    let flag = false;
+                    for(let c of cards) {
+                        if(c.data.type.includes('引擎')) {
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if(!flag) {
+                        GameManager.notifications.pushNotice('无可用引擎！！！');
+                        this.interactive = false;
+                        this.changeSelect(false);
+                        const noEngine = new Graphics();
+                        noEngine.lineStyle(2, 0xff0000, 1, 0);
+                        noEngine.moveTo(0, 0);
+                        noEngine.lineTo(this.width, this.height);
+                        noEngine.moveTo(this.width, 0);
+                        noEngine.lineTo(0, this.height);
+                        this.addChild(noEngine);
+                    }
+                    else {
+                        this.interactive = false;
+                        this.changeSelect(false);
+                        this.alpha = 0.7;
+                        GameManager.nowAction = id;
+                        GameManager.useEngine = true;
+                    } 
+                }
+            }
+        }
+        else if(id == 3) {
+            return function() {
+                if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
+                    this.interactive = false;
+                    this.changeSelect(false);
+                    this.alpha = 0.7;
+                    GameManager.nowAction = id;
+                }
+            }
+        }
+        else {
+            return function() {
+                if(GameManager.nowPhase == 3 && GameManager.nowAction == 0) {
+                    GameManager.actionTimes = 0;
+                    GameManager.nowPhase = 4;
+                }
             }
         }
     }
@@ -520,7 +626,7 @@ export class GameDeck {
     }
 
     initGift() {
-        const card = this.cards.find(c => c.label == '混合金属');
+        const card = this.cards.find(c => c.label == '个人终端');
         card.time = 0;
         GameManager.player.express.push(card);
     }
@@ -567,6 +673,9 @@ export class GameDeck {
     }
 
     drawCards() {
+        if(this.nowDeck.length < 3) {
+            this.setupDeck();
+        }
         return this.nowDeck.splice(0, 3);
     }
 
@@ -587,6 +696,10 @@ export class GameCardData {
         this.time = data.time;
         this.capacity = data.capacity;
         this.description = data.description;
+        
+        this.victory = data.victory || null;
+        this.command = data.command || null;
+        this.pay = data.pay || null;
     }
 
 }

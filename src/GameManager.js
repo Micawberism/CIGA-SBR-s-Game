@@ -44,10 +44,14 @@ export class GameManager {
             title: '',
             context: ''
         };
+        this.danger = null;
         this.message = null;
         this.actionTimes = 2;
         this.nowAction = 0;
+        this.actionItem = null;
+        this.useEngine = false;
         this.onBuyingCard = false;
+        this.ending = '';
         this.initPlayer();
     }
 
@@ -56,10 +60,11 @@ export class GameManager {
         this.player = {
             location: this.deck.showRealm(),
             resources: [
-                {label: '资金', value: 100, color: 'yellow'},
+                {label: '资金', value: 1, color: 'yellow'},
             ],
             express: [],
-            cards: []
+            cards: [],
+            victory: {}
         };
         this.deck.initGift();
     }
@@ -109,7 +114,8 @@ export class GameManager {
         this.dataList = [
             'cards',
             'news',
-            'deck'
+            'deck',
+            'start'
         ];
         this.dataBase = {};
     }
@@ -127,6 +133,35 @@ export class GameManager {
 
     static getData(key) {
         return this.dataBase[key];
+    }
+
+    static analysisCommand(command) {
+        const com = command.split(' ');
+        switch(com[0]) {
+            case '资金': {
+                GameManager.player.resources[0].value += parseInt(com[1]);
+                GameManager.notifications.pushNotice(command);
+            }
+            break;
+            case 'add': {
+                const card = this.deck.cards.find(x => x.label == com[1]);
+                card.time = 1;
+                GameManager.player.express.push(card);
+                GameManager.notifications.pushNotice('获得' + com[1] + '！');
+            }
+            break;
+            case 'vict': {
+                let vp = parseInt(com[2]);
+                GameManager.player.victory[com[1]] += vp;
+                GameManager.notifications.pushNotice(com[1] + '具有' + GameManager.player.victory[com[1]] + '%进度！');
+            }
+            break;
+            case '防御': {
+                const defence = GameManager.player.resources.find(x => x.label == '防御');
+                defence.value += parseInt(com[1]);
+            }
+            break;
+        }
     }
 
 }

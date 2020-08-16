@@ -5,7 +5,7 @@
 
 // 导入
 import {Container, filters, Graphics} from 'pixi.js';
-import {GlitchFilter} from 'pixi-filters'
+import {GlitchFilter, BulgePinchFilter, ZoomBlurFilter} from 'pixi-filters'
 import {GameManager} from './GameManager';
 import {SceneManager} from './SceneManager';
 import {GameTable_Card, GameTable_Map} from './GameTable';
@@ -70,7 +70,6 @@ export class GameScene_Load extends GameScene_Base {
 
     create() {
         super.create();
-        SceneManager.moveScene(GameScene_Start);
         this.drawLogo();
         this.jumpLogo();
     }
@@ -193,7 +192,35 @@ export class GameScene_Start extends GameScene_Base {
     create() {
         super.create();
         GameManager.loadDataBase();
-        SceneManager.moveScene(GameScene_Main);
+        this.startList = GameManager.getData('start');
+        this.delayTime = 0;
+    }
+
+    update() {
+        if(this.startList.length == 0) {
+            SceneManager.moveScene(GameScene_Main);
+        }
+        if(this.startList.length > 0 && this.delayTime == 0) {
+            this.removeChildren();
+            this.description = GameManager.drawText(this.startList.shift(), 0, 0, 42);
+            GameManager.autoWrap(this.description, GameManager.width() * 0.8);
+            this.description.position.set((GameManager.width() - this.description.width) / 2,
+                                    (GameManager.height() - this.description.height) / 2);
+            this.addChild(this.description);
+            this.description.interactive = true;
+            this.description.on('click', () => {
+                this.delayTime = 5.0;
+            });
+        }
+        if(this.description && this.delayTime < 5.0) {
+            this.delayTime += 1 / 60;
+        }
+        if(this.delayTime > 3.0) {
+            this.description.alpha -= 0.05;
+        }
+        if(this.description.alpha <= 0) {
+            this.delayTime = 0;
+        }
     }
 
 }
@@ -259,12 +286,8 @@ export class GameScene_Main extends GameScene_Base {
     }
 
     createAction() {
-        this.action = new GameFrame('0', '70', '90', '100', true);
+        this.action = new GameAction('0', '70', '90', '100', true);
         this.addChild(this.action);
-        const actionItems = new GameAction();
-        actionItems.x = (this.action.width - actionItems.width) / 2;
-        actionItems.y = (this.action.height - actionItems.height) / 2;
-        this.action.addChild(actionItems);
     }
 
     createNotifications() {
@@ -278,6 +301,12 @@ export class GameScene_Main extends GameScene_Base {
         this.blur = new filters.BlurFilter();
         this.filters.push(this.blur);
         this.changeBlur(false);
+        this.zoomBlur = new ZoomBlurFilter();
+        this.zoomBlur.strength = 0.01;
+        this.zoomBlur.center.x = GameManager.width() / 2;
+        this.zoomBlur.center.y = GameManager.height() / 2;
+        this.zoomBlur.enabled = false;
+        this.filters.push(this.zoomBlur);
     }
 
     changeBlur(focus) {
@@ -292,13 +321,26 @@ export class GameScene_Main extends GameScene_Base {
 
     setInteraction() {
         this.interactive = true;
-        this.on('click', this.mouseAction);
+        this.on('click', this.mouseAction)
+            .on('pointermove', this.mouseMove)
     }
 
     mouseAction() {
         switch(GameManager.nowPhase) {
             case 0: {
                 this.delayTime = 3;
+            }
+            break;
+        }
+    }
+
+    mouseMove(event) {
+        switch(GameManager.nowPhase) {
+            case 3: {
+                if(GameManager.useEngine && this.phaseShow.isShowed()) {
+                    const p = event.data.getLocalPosition(this.parent);
+                    this.phaseShow.show.position.set(p.x + 48, p.y + 48);
+                }
             }
             break;
         }
@@ -316,6 +358,7 @@ export class GameScene_Main extends GameScene_Base {
             case 7: this.phaseEnd(); break;
         }
         GameManager.notifications.updateNotice();
+        this.status.redraw();
     }
 
     phaseStart() {
@@ -381,7 +424,21 @@ export class GameScene_Main extends GameScene_Base {
                 if(this.phaseShow.isShowed()) {
                     this.phaseShow.closeShow();
                     this.status.redraw();
+                    this.zoomBlur.strength = 0.01;
+                    this.zoomBlur.enabled = false;
                 }
+            }
+            break;
+            case 1: {
+                this.zoomBlur.enabled = true;
+                if(this.zoomBlur.strength <= 0.5) {
+                    this.zoomBlur.strength += 0.05
+                }
+                this.phaseShow.showMoveSpace();
+            }
+            break;
+            case 2: {
+                this.phaseShow.showStartEngine();
             }
             break;
             case 3: {
@@ -392,19 +449,47 @@ export class GameScene_Main extends GameScene_Base {
     }
 
     phaseDanger() {
-        //
+        if(!GameManager.danger) {
+            GameManager.notifications.pushNotice('本周平安无事。');
+        }
+        GameManager.nowPhase = 5;
     }
 
     phaseCost() {
-        //
+        for(let c of GameManager.player.cards) {
+            if(c.data.pay) {
+                c.cardPay();
+            }
+        }
+        this.status.redraw();
+        GameManager.nowPhase = 6;
     }
 
     phaseVictory() {
-        //
+        if(GameManager.player.resources[0].value <= 0) {
+            GameManager.ending = '走投无路';
+            SceneManager.moveScene(GameScene_End);
+        }
+        else {
+            GameManager.nowPhase = 7;
+        }
     }
 
     phaseEnd() {
-        //
+        GameManager.expIndex = -1;
+        GameManager.news = {
+            title: '',
+            context: ''
+        };
+        GameManager.message = null;
+        GameManager.actionTimes = 2;
+        GameManager.nowAction = 0;
+        for(let e of GameManager.player.express) {
+            e.time--;
+        }
+        GameManager.onBuyingCard = false;
+        GameManager.nowPhase = 0;
+        this.action.activation();
     }
 
 }
@@ -414,3 +499,79 @@ export class GameScene_Main extends GameScene_Base {
 //
 // 游戏结束场景。
 //-----------------------------------------------------------
+
+export class GameScene_End extends GameScene_Base {
+
+    constructor() {
+        super();
+    }
+
+    create() {
+        super.create();
+        this.drawBackground();
+        this.drawEnd();
+        this.setInteraction();
+    }
+
+    drawBackground() {
+        this.background = new Graphics();
+        this.background.beginFill(0x000000);
+        this.background.drawRect(0, 0, GameManager.width(), GameManager.height());
+        this.background.endFill();
+        this.addChild(this.background);
+    }
+
+    drawEnd() {
+        this.endLabel = null;
+        switch(GameManager.ending) {
+            case '走投无路': {
+                const text = `银河xx月oo日：\n本报讯，我们在${GameManager.player.location}发现了一位不知名死者孤独死在个人空间站中。从现场痕迹来看，可以排除他杀的可能性，负责勘察现场的治安官则断言这名死者不是自杀，初步推断是由于缺乏照料因病渴死在自己家中。目前，警方正在做进一步调查，而知名社会学家隆德·泰勒则发表论文称政府应正视“茧居族”这社会现象及其造成的影响……`
+                this.endLabel = GameManager.drawText(text, 0, 0, 30);
+            }
+            break;
+            case '百年合同胜利': {
+                //
+            }
+            break;
+            case '异星博物馆胜利': {
+                //
+            }
+            break;
+            case '工人胜利': {
+                //
+            }
+            break;
+            case '黑手党胜利': {
+                //
+            }
+            break;
+        }
+        GameManager.autoWrap(this.endLabel, GameManager.width() * 0.8);
+        this.endLabel.position.set((GameManager.width() - this.endLabel.width) / 2,
+        (GameManager.height() - this.endLabel.height) / 2);
+        this.addChild(this.endLabel);
+    }
+
+    setInteraction() {
+        this.endLabel.interactive = true;
+        this.endLabel.on('click', () => {
+            this.delayTime = 5;
+            this.speed = 0.01;
+        });
+        this.delayTime = 0;
+        this.speed = 0.005;
+    }
+
+    update() {
+        if(this.delayTime <= 10.0) {
+            this.delayTime += 1 / 60;
+        }
+        if(this.delayTime > 5.0) {
+            this.endLabel.alpha -= this.speed;
+        }
+        if(this.endLabel.alpha <= 0) {
+            SceneManager.moveScene(GameScene_Title);
+        }
+    }
+
+}
